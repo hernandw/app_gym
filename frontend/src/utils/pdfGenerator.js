@@ -112,3 +112,60 @@ export const generateReceiptPDF = ({ clienteNombre, telefono, monto, fechaPago, 
 
   doc.save(`Recibo_${clienteNombre?.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
 };
+
+// 3. Generar Reporte de Balance Financiero para el Administrador
+export const generateFinancialReportPDF = ({ summary, members = [] }) => {
+  const doc = new jsPDF();
+
+  // Cabecera institucional
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 35, 'F');
+
+  doc.setTextColor(16, 185, 129);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GYM APP - INFORME GENERAL DE COBRANZAS', 14, 20);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 28);
+
+  // Cuadro de Resumen Financiero
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RESUMEN DE RECAUDACIÓN', 14, 48);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Ingresos este Mes: $${Number(summary?.monthlyRevenue || 0).toLocaleString()}`, 14, 56);
+  doc.text(`Ingresos del Año: $${Number(summary?.yearlyRevenue || 0).toLocaleString()}`, 14, 62);
+  doc.text(`Total Histórico: $${Number(summary?.totalRevenue || 0).toLocaleString()}`, 14, 68);
+
+  doc.text(`Socios Activos: ${summary?.activeCount || 0}`, 120, 56);
+  doc.text(`Socios Morosos: ${summary?.expiredCount || 0}`, 120, 62);
+  doc.text(`Total Atletas Registrados: ${summary?.totalMembers || 0}`, 120, 68);
+
+  // Tabla detallada de socios
+  const tableData = members.map((m) => {
+    const isPaid = m.fechaVencimiento && new Date(m.fechaVencimiento) >= new Date();
+    return [
+      m.nombre,
+      m.telefono,
+      m.fechaVencimiento ? new Date(m.fechaVencimiento).toLocaleDateString() : 'Sin fecha',
+      isPaid ? 'Al día' : 'Vencido'
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 76,
+    head: [['Nombre Socio', 'Teléfono', 'Vencimiento', 'Estado Cuota']],
+    body: tableData,
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    styles: { fontSize: 9 },
+  });
+
+  doc.save(`Reporte_Financiero_Gym_${Date.now()}.pdf`);
+};

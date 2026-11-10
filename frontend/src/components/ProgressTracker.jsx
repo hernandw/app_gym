@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Activity, Plus, MessageSquareShare } from 'lucide-react';
+import { Activity, Plus, MessageSquareShare, FileDown } from 'lucide-react';
 import { generateMeasurementsReportLink } from '../utils/whatsapp';
-import ProgressCharts from './ProgressCharts';
-import { FileDown } from 'lucide-react';
 import { generateMeasurementPDF } from '../utils/pdfGenerator';
+import ProgressCharts from './ProgressCharts';
 
 export default function ProgressTracker() {
   const [measurements, setMeasurements] = useState([]);
@@ -38,7 +37,6 @@ export default function ProgressTracker() {
     e.preventDefault();
     setErrorMsg('');
 
-    // Validar que al menos un dato haya sido rellenado
     const hasData = Object.values(formData).some((val) => val !== '' && !isNaN(parseFloat(val)));
     if (!hasData) {
       setErrorMsg('Debes ingresar al menos una medida (peso, % grasa, pecho, brazo o cintura).');
@@ -71,44 +69,39 @@ export default function ProgressTracker() {
       {/* Gráfica interactiva de evolución física */}
       <ProgressCharts measurements={measurements} />
 
-      {/* Tarjeta de registro e historial tabular */}
+      {/* Historial y formulario */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold">
             <Activity className="w-5 h-5" />
             <span>Evolución de Medidas</span>
           </div>
-          <button
-            onClick={() => {
-              setShowForm(!showForm);
-              setErrorMsg('');
-            }}
-            className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
-            <div className="flex items-center gap-2">
-  <button
-    onClick={() => {
-      const userStored = JSON.parse(localStorage.getItem('gym_user') || '{}');
-      generateMeasurementPDF(userStored, measurements);
-    }}
-    disabled={measurements.length === 0}
-    className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
-  >
-    <FileDown className="w-4 h-4" /> Exportar PDF
-  </button>
 
-  <button
-    onClick={() => {
-      setShowForm(!showForm);
-      setErrorMsg('');
-    }}
-    className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
-  >
-    <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
-  </button>
-</div>
-          </button>
+          {/* Contenedor de botones separados */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const userStored = JSON.parse(localStorage.getItem('gym_user') || '{}');
+                generateMeasurementPDF(userStored, measurements);
+              }}
+              disabled={measurements.length === 0}
+              className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <FileDown className="w-4 h-4" /> Exportar PDF
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(!showForm);
+                setErrorMsg('');
+              }}
+              className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
+            </button>
+          </div>
         </div>
 
         {showForm && (

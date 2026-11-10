@@ -3,6 +3,39 @@ import api from '../services/api';
 import { Search, UserCheck, CheckCircle2, AlertTriangle, Users, QrCode } from 'lucide-react';
 import QRScannerModal from './QRScannerModal';
 
+// Generador de tonos de audio nativos con Web Audio API
+const playFeedbackSound = (type = 'success') => {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'success') {
+      // Tono agudo y agradable (Aprobado)
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } else {
+      // Tono grave / alerta (Rechazado o cuota vencida)
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+      osc.frequency.setValueAtTime(164.81, audioCtx.currentTime + 0.15); // E3
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.4);
+    }
+  } catch (err) {
+    console.error('Audio API no soportado o bloqueado:', err);
+  }
+};
+
 export default function ReceptionCheckin() {
   const [telefono, setTelefono] = useState('');
   const [todayList, setTodayList] = useState([]);
@@ -31,10 +64,20 @@ export default function ReceptionCheckin() {
 
     try {
       const res = await api.post('/attendance/admin/checkin', { telefono: phoneToValidate });
-      setLastCheckin(res.data.member);
+      const member = res.data.member;
+      setLastCheckin(member);
       setTelefono('');
+      
+      const isPaid = member?.fechaVencimiento && new Date(member.fechaVencimiento) >= new Date();
+      if (isPaid) {
+        playFeedbackSound('success');
+      } else {
+        playFeedbackSound('error');
+      }
+
       fetchTodayList();
     } catch (err) {
+      playFeedbackSound('error');
       setErrorMsg(err.response?.data?.error || 'Error al validar acceso.');
       if (err.response?.data?.member) {
         setLastCheckin(err.response.data.member);
@@ -106,19 +149,23 @@ export default function ReceptionCheckin() {
       </div>
 
       {lastCheckin && (
-        <div className="mb-5 p-4 bg-slate-900/80 border border-slate-700 rounded-xl flex items-center justify-between">
+        <div className={`mb-5 p-4 rounded-xl border flex items-center justify-between transition-all ${
+          lastCheckin.fechaVencimiento && new Date(lastCheckin.fechaVencimiento) >= new Date()
+            ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+            : 'bg-rose-950/30 border-rose-500/40 text-rose-200'
+        }`}>
           <div>
-            <h4 className="text-sm font-bold text-slate-100">{lastCheckin.nombre}</h4>
+            <h4 className="text-base font-bold text-slate-100">{lastCheckin.nombre}</h4>
             <p className="text-xs text-slate-400 font-mono">{lastCheckin.telefono}</p>
           </div>
           <div className="text-right">
             {lastCheckin.fechaVencimiento && new Date(lastCheckin.fechaVencimiento) >= new Date() ? (
-              <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-bold">
-                <CheckCircle2 className="w-4 h-4" /> Cuota al día
+              <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-full font-bold">
+                <CheckCircle2 className="w-4 h-4" /> Acceso Permitido (Cuota al día)
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1 rounded-full font-bold">
-                <AlertTriangle className="w-4 h-4" /> Cuota vencida
+              <span className="inline-flex items-center gap-1.5 text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-full font-bold">
+                <AlertTriangle className="w-4 h-4" /> Cuota Vencida
               </span>
             )}
           </div>
