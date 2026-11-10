@@ -7,6 +7,7 @@ export default function ProgressTracker() {
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     peso: '',
     grasa: '',
@@ -32,6 +33,15 @@ export default function ProgressTracker() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+
+    // Validar que al menos un dato haya sido rellenado
+    const hasData = Object.values(formData).some((val) => val !== '' && !isNaN(parseFloat(val)));
+    if (!hasData) {
+      setErrorMsg('Debes ingresar al menos una medida (peso, % grasa, pecho, brazo o cintura).');
+      return;
+    }
+
     try {
       await api.post('/measurements', formData);
       setFormData({ peso: '', grasa: '', pecho: '', brazo: '', cintura: '' });
@@ -39,6 +49,7 @@ export default function ProgressTracker() {
       fetchMeasurements();
     } catch (err) {
       console.error('Error al registrar medidas:', err);
+      setErrorMsg(err.response?.data?.error || 'Error al guardar la toma de medidas.');
     }
   };
 
@@ -60,19 +71,29 @@ export default function ProgressTracker() {
           <span>Evolución de Medidas</span>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            setShowForm(!showForm);
+            setErrorMsg('');
+          }}
           className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
         >
-          <Plus className="w-4 h-4" /> Nueva toma
+          <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
         </button>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-slate-900/60 p-4 rounded-lg border border-slate-700 mb-4 space-y-3">
+          {errorMsg && (
+            <div className="p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded text-xs">
+              {errorMsg}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="Peso (kg)"
               value={formData.peso}
               onChange={(e) => setFormData({ ...formData, peso: e.target.value })}
@@ -81,6 +102,7 @@ export default function ProgressTracker() {
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="% Grasa"
               value={formData.grasa}
               onChange={(e) => setFormData({ ...formData, grasa: e.target.value })}
@@ -89,6 +111,7 @@ export default function ProgressTracker() {
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="Pecho (cm)"
               value={formData.pecho}
               onChange={(e) => setFormData({ ...formData, pecho: e.target.value })}
@@ -97,6 +120,7 @@ export default function ProgressTracker() {
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="Brazo (cm)"
               value={formData.brazo}
               onChange={(e) => setFormData({ ...formData, brazo: e.target.value })}
@@ -105,6 +129,7 @@ export default function ProgressTracker() {
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="Cintura (cm)"
               value={formData.cintura}
               onChange={(e) => setFormData({ ...formData, cintura: e.target.value })}

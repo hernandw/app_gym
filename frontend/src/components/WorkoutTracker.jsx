@@ -6,6 +6,8 @@ export default function WorkoutTracker() {
   const [stats, setStats] = useState({ totalVolume: 0, daysAttended: 0, recentLogs: [] });
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({ exerciseId: '', pesoUsado: '', reps: '' });
 
   const fetchData = async () => {
@@ -14,10 +16,14 @@ export default function WorkoutTracker() {
         api.get('/workouts/stats'),
         api.get('/routines/exercises')
       ]);
-      setStats(statsRes.data);
-      setExercises(exercisesRes.data);
-      if (exercisesRes.data.length > 0 && !formData.exerciseId) {
-        setFormData((prev) => ({ ...prev, exerciseId: exercisesRes.data[0].id }));
+      setStats(statsRes.data || { totalVolume: 0, daysAttended: 0, recentLogs: [] });
+      setExercises(exercisesRes.data || []);
+      
+      if (exercisesRes.data && exercisesRes.data.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          exerciseId: prev.exerciseId || exercisesRes.data[0].id
+        }));
       }
     } catch (err) {
       console.error('Error cargando datos de entrenamiento:', err);
@@ -32,13 +38,37 @@ export default function WorkoutTracker() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.exerciseId || !formData.pesoUsado || !formData.reps) return;
+    setErrorMsg('');
+
+    if (!formData.exerciseId) {
+      setErrorMsg('Debes seleccionar un ejercicio primero. Crea uno en la sección de rutinas si la lista está vacía.');
+      return;
+    }
+
+    if (!formData.pesoUsado || parseFloat(formData.pesoUsado) < 0) {
+      setErrorMsg('Ingresa un peso válido.');
+      return;
+    }
+
+    if (!formData.reps || parseInt(formData.reps, 10) <= 0) {
+      setErrorMsg('Ingresa una cantidad de repeticiones válida (mayor a 0).');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await api.post('/workouts/log', formData);
-      setFormData({ ...formData, pesoUsado: '', reps: '' });
-      fetchData();
+      await api.post('/workouts/log', {
+        exerciseId: formData.exerciseId,
+        pesoUsado: parseFloat(formData.pesoUsado),
+        reps: parseInt(formData.reps, 10)
+      });
+      setFormData((prev) => ({ ...prev, pesoUsado: '', reps: '' }));
+      await fetchData();
     } catch (err) {
       console.error('Error al registrar serie:', err);
+      setErrorMsg(err.response?.data?.error || 'Error al registrar la serie en el servidor.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -51,7 +81,7 @@ export default function WorkoutTracker() {
             <Calendar className="w-4 h-4 text-emerald-400" />
             <span>Días entrenados</span>
           </div>
-          <p className="text-xl font-bold text-slate-100">{stats.daysAttended} días</p>
+          <p className="text-xl font-bold text-slate-100">{stats.daysAttended || 0} días</p>
         </div>
 
         <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-700/60">
@@ -59,7 +89,7 @@ export default function WorkoutTracker() {
             <TrendingUp className="w-4 h-4 text-cyan-400" />
             <span>Peso acumulado</span>
           </div>
-          <p className="text-xl font-bold text-slate-100">{stats.totalVolume.toLocaleString()} kg</p>
+          <p className="text-xl font-bold text-slate-100">{(stats.totalVolume || 0).toLocaleString()} kg</p>
         </div>
 
         <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-700/60 col-span-2 sm:col-span-1">
@@ -67,15 +97,22 @@ export default function WorkoutTracker() {
             <Flame className="w-4 h-4 text-orange-400" />
             <span>Series registradas</span>
           </div>
-          <p className="text-xl font-bold text-slate-100">{stats.recentLogs.length} series</p>
+          <p className="text-xl font-bold text-slate-100">{stats.recentLogs?.length || 0} series</p>
         </div>
       </div>
 
-      {/* Formulario rápido para anotar levantamiento */}
+      {/* Formulario para anotar levantamiento */}
       <form onSubmit={handleSubmit} className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 mb-5">
         <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1">
           <Plus className="w-4 h-4 text-emerald-400" /> Registrar carga levantada
         </h3>
+
+        {errorMsg && (
+          <div className="mb-3 p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded text-xs">
+            {errorMsg}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
           <select
             value={formData.exerciseId}
@@ -83,7 +120,7 @@ export default function WorkoutTracker() {
             className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500 sm:col-span-2"
           >
             {exercises.length === 0 ? (
-              <option value="">Sin ejercicios disponibles</option>
+              <option value="">No hay ejercicios creados aún</option>
             ) : (
               exercises.map((ex) => (
                 <option key={ex.id} value={ex.id}>
@@ -95,6 +132,8 @@ export default function WorkoutTracker() {
           <input
             type="number"
             step="0.5"
+            min="0"
+            required
             placeholder="Peso (kg)"
             value={formData.pesoUsado}
             onChange={(e) => setFormData({ ...formData, pesoUsado: e.target.value })}
@@ -102,6 +141,8 @@ export default function WorkoutTracker() {
           />
           <input
             type="number"
+            min="1"
+            required
             placeholder="Repeticiones"
             value={formData.reps}
             onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
@@ -110,16 +151,17 @@ export default function WorkoutTracker() {
         </div>
         <button
           type="submit"
-          className="w-full mt-2 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded text-xs transition-colors"
+          disabled={submitting || exercises.length === 0}
+          className="w-full mt-2 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded text-xs transition-colors"
         >
-          Anotar serie
+          {submitting ? 'Guardando serie...' : 'Anotar serie'}
         </button>
       </form>
 
-      {/* Últimos registros */}
+      {/* Historial reciente */}
       <div>
         <h4 className="text-xs font-semibold text-slate-400 mb-2">Últimos levantamientos</h4>
-        {stats.recentLogs.length === 0 ? (
+        {!stats.recentLogs || stats.recentLogs.length === 0 ? (
           <p className="text-slate-500 text-xs">No hay entrenamientos registrados hoy.</p>
         ) : (
           <div className="space-y-1.5">
@@ -128,7 +170,7 @@ export default function WorkoutTracker() {
                 key={log.id}
                 className="flex justify-between items-center bg-slate-900/30 px-3 py-2 rounded border border-slate-700/40 text-xs"
               >
-                <span className="font-medium text-slate-200">{log.exercise?.nombre}</span>
+                <span className="font-medium text-slate-200">{log.exercise?.nombre || 'Ejercicio'}</span>
                 <span className="text-emerald-400 font-semibold">
                   {log.pesoUsado} kg × {log.reps} reps
                 </span>

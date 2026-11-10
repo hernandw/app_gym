@@ -19,14 +19,22 @@ export const addMeasurement = async (req, res) => {
   try {
     const { peso, grasa, pecho, brazo, cintura } = req.body;
 
+    const hasValue = [peso, grasa, pecho, brazo, cintura].some(
+      (v) => v !== undefined && v !== null && v !== '' && !isNaN(parseFloat(v))
+    );
+
+    if (!hasValue) {
+      return res.status(400).json({ error: 'Debes proporcionar al menos una medida corporal válida.' });
+    }
+
     const newMeasurement = await prisma.measurement.create({
       data: {
         userId: req.user.id,
-        peso: peso ? parseFloat(peso) : null,
-        grasa: grasa ? parseFloat(grasa) : null,
-        pecho: pecho ? parseFloat(pecho) : null,
-        brazo: brazo ? parseFloat(brazo) : null,
-        cintura: cintura ? parseFloat(cintura) : null
+        peso: peso && !isNaN(parseFloat(peso)) ? parseFloat(peso) : null,
+        grasa: grasa && !isNaN(parseFloat(grasa)) ? parseFloat(grasa) : null,
+        pecho: pecho && !isNaN(parseFloat(pecho)) ? parseFloat(pecho) : null,
+        brazo: brazo && !isNaN(parseFloat(brazo)) ? parseFloat(brazo) : null,
+        cintura: cintura && !isNaN(parseFloat(cintura)) ? parseFloat(cintura) : null
       }
     });
 
