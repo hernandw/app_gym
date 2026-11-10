@@ -75,7 +75,7 @@ function Dashboard() {
         <main>
           {activeTab === 'admin' && isAdmin && <AdminPanel />}
 
-          {activeTab === 'asistencia' && <AttendanceCard />}
+          {activeTab === 'asistencia' && <AttendanceCard user={user} />}
 
           {activeTab === 'medidas' && <ProgressTracker />}
 

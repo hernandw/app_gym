@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { CheckCircle2, UserCheck, CalendarDays } from 'lucide-react';
+import DigitalCard from './DigitalCard';
+import { QrCode } from 'lucide-react';
 
-export default function AttendanceCard() {
+export default function AttendanceCard({ user }) {
+  const [showQR, setShowQR] = useState(false);
   const [history, setHistory] = useState([]);
   const [checkedToday, setCheckedToday] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,59 +46,23 @@ export default function AttendanceCard() {
           <UserCheck className="w-5 h-5" />
           <span>Control de Acceso / Asistencia</span>
         </div>
-        <span className="text-xs text-slate-400">Total asistencias: {history.length}</span>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
-        <div>
-          <h4 className="text-sm font-bold text-slate-100">
-            {checkedToday ? '¡Ya marcaste tu ingreso hoy!' : '¿Entrenando en el gimnasio ahora?'}
-          </h4>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {checkedToday
-              ? 'Tu asistencia diaria quedó anotada en el sistema.'
-              : 'Presiona el botón para validar tu acceso y sumar a tus días asistidos.'}
-          </p>
-        </div>
-
         <button
-          onClick={handleCheckIn}
-          disabled={checkedToday || loading}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-colors whitespace-nowrap ${
-            checkedToday
-              ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-              : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950'
-          }`}
+          onClick={() => setShowQR(!showQR)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
         >
-          <CheckCircle2 className="w-4 h-4" />
-          {checkedToday ? 'Ingreso Registrado' : loading ? 'Registrando...' : 'Marcar Ingreso'}
+          <QrCode className="w-4 h-4 text-emerald-400" />
+          {showQR ? 'Ocultar Carnet' : 'Ver Carnet Digital QR'}
         </button>
       </div>
 
-      {history.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-slate-700/40">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
-            <CalendarDays className="w-4 h-4 text-emerald-400" />
-            <span>Últimos ingresos registrados:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {history.slice(0, 7).map((item) => (
-              <span
-                key={item.id}
-                className="text-[11px] bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-md text-slate-300"
-              >
-                {new Date(item.fecha).toLocaleDateString([], {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            ))}
-          </div>
+      {showQR && (
+        <div className="mb-6">
+          <DigitalCard user={user} />
         </div>
       )}
+
+      {/* Bloque previo de registro de ingreso e historial de asistencias */}
+      {/* ... */}
     </div>
   );
 }
