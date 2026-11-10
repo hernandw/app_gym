@@ -3,6 +3,8 @@ import api from '../services/api';
 import { Activity, Plus, MessageSquareShare } from 'lucide-react';
 import { generateMeasurementsReportLink } from '../utils/whatsapp';
 import ProgressCharts from './ProgressCharts';
+import { FileDown } from 'lucide-react';
+import { generateMeasurementPDF } from '../utils/pdfGenerator';
 
 export default function ProgressTracker() {
   const [measurements, setMeasurements] = useState([]);
@@ -84,6 +86,28 @@ export default function ProgressTracker() {
             className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
+            <div className="flex items-center gap-2">
+  <button
+    onClick={() => {
+      const userStored = JSON.parse(localStorage.getItem('gym_user') || '{}');
+      generateMeasurementPDF(userStored, measurements);
+    }}
+    disabled={measurements.length === 0}
+    className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+  >
+    <FileDown className="w-4 h-4" /> Exportar PDF
+  </button>
+
+  <button
+    onClick={() => {
+      setShowForm(!showForm);
+      setErrorMsg('');
+    }}
+    className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors"
+  >
+    <Plus className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Nueva toma'}
+  </button>
+</div>
           </button>
         </div>
 

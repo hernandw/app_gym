@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { CreditCard, CheckCircle, AlertTriangle, Receipt, UserCheck, MessageSquareShare } from 'lucide-react';
 import { generatePaymentReceiptLink } from '../utils/whatsapp';
+import { FileDown } from 'lucide-react';
+import { generateReceiptPDF } from '../utils/pdfGenerator';
 
 export default function MembershipCard({ user }) {
   const [payments, setPayments] = useState([]);
@@ -171,6 +173,23 @@ export default function MembershipCard({ user }) {
             >
               Registrar Cobro y Extender Membresía (+30 días)
             </button>
+            <button
+  type="button"
+  onClick={() => {
+    generateReceiptPDF({
+      clienteNombre: m.nombre,
+      telefono: m.telefono,
+      monto: parseFloat(monto) || 25000,
+      fechaPago: m.fechaPago || new Date(),
+      fechaVencimiento: m.fechaVencimiento || new Date(),
+      metodo: 'Mensualidad'
+    });
+  }}
+  title="Descargar comprobante en PDF"
+  className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 hover:text-white"
+>
+  <FileDown className="w-3.5 h-3.5 inline" />
+</button>
           </form>
 
           {/* Lista de socios con estado de vencimiento y acción WhatsApp */}
