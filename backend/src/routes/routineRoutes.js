@@ -3,9 +3,10 @@ import {
   getExercises, 
   createExercise, 
   getMyRoutines, 
-  createRoutine 
+  createRoutine,
+  createAdminTemplate 
 } from '../controllers/routineController.js';
-import { verifyToken } from '../middlewares/authMiddleware.js';
+import { verifyToken, requireRole } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
 
 const router = Router();
@@ -19,5 +20,6 @@ router.post('/exercises', upload.single('imagen'), createExercise);
 // Rutinas
 router.get('/', getMyRoutines);
 router.post('/', createRoutine);
+router.post('/templates', requireRole('ADMIN'), createAdminTemplate);
 
 export default router;

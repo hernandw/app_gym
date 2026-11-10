@@ -8,17 +8,20 @@ import MembershipCard from './components/MembershipCard';
 import AttendanceCard from './components/AttendanceCard';
 import RestTimer from './components/RestTimer';
 import { Dumbbell, Activity, CalendarCheck, CreditCard, LogOut } from 'lucide-react';
+import AdminPanel from './components/AdminPanel';
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('entrenamiento');
+  const isAdmin = user?.rol === 'ADMIN';
 
-  const tabs = [
-    { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
-    { id: 'asistencia', label: 'Asistencia', icon: CalendarCheck },
-    { id: 'medidas', label: 'Medidas', icon: Activity },
-    { id: 'membresia', label: user?.rol === 'ADMIN' ? 'Cobros' : 'Membresía', icon: CreditCard },
-  ];
+ const tabs = [
+  { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
+  { id: 'asistencia', label: 'Asistencia', icon: CalendarCheck },
+  { id: 'medidas', label: 'Medidas', icon: Activity },
+  { id: 'membresia', label: isAdmin ? 'Cobros Rápidos' : 'Membresía', icon: CreditCard },
+  ...(isAdmin ? [{ id: 'admin', label: 'Administración', icon: Users }] : []),
+];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6 pb-20">
@@ -66,12 +69,7 @@ function Dashboard() {
 
         {/* Contenido según pestaña activa */}
         <main>
-          {activeTab === 'entrenamiento' && (
-            <div className="space-y-5">
-              <WorkoutTracker />
-              <RoutinesView />
-            </div>
-          )}
+          {activeTab === 'admin' && isAdmin && <AdminPanel />}
 
           {activeTab === 'asistencia' && <AttendanceCard />}
 

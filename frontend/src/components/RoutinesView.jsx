@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Dumbbell, Clock, Repeat, ListPlus } from 'lucide-react';
-import AddExerciseModal from './AddExerciseModal';
+import { Dumbbell, Clock, Repeat, CheckCircle } from 'lucide-react';
 
-export default function RoutinesView() {
+export default function RoutinesView({ onSelectRoutineForWorkout }) {
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeRoutineId, setActiveRoutineId] = useState(null);
 
-  // 1. Declarar fetchRoutines directamente en el cuerpo del componente
   const fetchRoutines = async () => {
     try {
       const res = await api.get('/routines');
       setRoutines(res.data);
+      if (res.data.length > 0) setActiveRoutineId(res.data[0].id);
     } catch (err) {
       console.error('Error al cargar rutinas:', err);
     } finally {
@@ -19,75 +19,65 @@ export default function RoutinesView() {
     }
   };
 
-  // 2. Invocarla en el montaje
   useEffect(() => {
     fetchRoutines();
   }, []);
 
-  if (loading) {
-    return <p className="text-slate-400 text-xs">Cargando rutinas disponibles...</p>;
-  }
+  if (loading) return <p className="text-slate-400 text-xs">Cargando catálogo de rutinas...</p>;
+
+  const selectedRoutine = routines.find((r) => r.id === activeRoutineId);
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-          <Dumbbell className="w-5 h-5" />
-          <span>Mis Rutinas y Plantillas</span>
-        </div>
-        {/* Ahora fetchRoutines ya existe y está disponible */}
-        <AddExerciseModal onExerciseAdded={fetchRoutines} />
+      <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-4">
+        <Dumbbell className="w-5 h-5" />
+        <span>Elige tu Rutina de Hoy</span>
       </div>
 
-      {loading ? (
-        <p className="text-slate-400 text-xs">Cargando rutinas disponibles...</p>
-      ) : routines.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-xs">
-          <ListPlus className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          No hay rutinas asignadas ni plantillas creadas todavía.
-        </div>
+      {routines.length === 0 ? (
+        <p className="text-slate-500 text-xs">El administrador aún no ha cargado rutinas oficiales.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {routines.map((routine) => (
-            <div
-              key={routine.id}
-              className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-bold text-slate-100 text-sm">{routine.nombre}</h3>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                    {routine.userId ? 'Personalizada' : 'General'}
-                  </span>
-                </div>
+        <div>
+          {/* Selector tipo pastillas/chips para elegir grupo muscular */}
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-4 border-b border-slate-700/60">
+            {routines.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setActiveRoutineId(r.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeRoutineId === r.id
+                    ? 'bg-emerald-500 text-slate-950 font-bold'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                }`}
+              >
+                {r.nombre}
+              </button>
+            ))}
+          </div>
 
-                <div className="space-y-2">
-                  {routine.ejercicios.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center text-xs bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50"
-                    >
-                      <div>
-                        <p className="font-medium text-slate-200">{item.exercise?.nombre}</p>
-                        <p className="text-[10px] text-slate-400">{item.exercise?.grupoMuscular}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-                        <span className="flex items-center gap-1">
-                          <Repeat className="w-3.5 h-3.5 text-emerald-400" />
-                          {item.series} × {item.reps}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-blue-400" />
-                          {item.descansoSeg}s
-                        </span>
-                      </div>
+          {/* Detalle de ejercicios de la rutina seleccionada */}
+          {selectedRoutine && (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-400 mb-2">Ejercicios sugeridos para esta sesión:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {selectedRoutine.ejercicios.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between items-center bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 text-xs"
+                  >
+                    <div>
+                      <p className="font-bold text-slate-100">{item.exercise?.nombre}</p>
+                      <p className="text-[10px] text-emerald-400">{item.exercise?.grupoMuscular}</p>
                     </div>
-                  ))}
-                </div>
+                    <div className="text-right text-slate-400 text-[11px]">
+                      <p className="font-semibold text-slate-200">{item.series} series × {item.reps} reps</p>
+                      <p className="text-[10px] text-slate-500">{item.descansoSeg}s descanso</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
