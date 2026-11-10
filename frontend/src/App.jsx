@@ -7,25 +7,41 @@ import WorkoutTracker from './components/WorkoutTracker';
 import MembershipCard from './components/MembershipCard';
 import AttendanceCard from './components/AttendanceCard';
 import RestTimer from './components/RestTimer';
-import { Dumbbell, Activity, CalendarCheck, CreditCard, LogOut } from 'lucide-react';
-import AdminPanel from './components/AdminPanel';
 import ExerciseCatalog from './components/ExerciseCatalog';
-import { BookOpen } from 'lucide-react';
+import AdminPanel from './components/AdminPanel';
+import { 
+  Dumbbell, 
+  Activity, 
+  CalendarCheck, 
+  CreditCard, 
+  LogOut, 
+  BookOpen, 
+  ShieldCheck,
+  LayoutDashboard
+} from 'lucide-react';
 
 function Dashboard() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('entrenamiento');
   const isAdmin = user?.rol === 'ADMIN';
+
+  // Pestaña inicial según el rol
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'admin' : 'inicio');
   const [selectedRoutine, setSelectedRoutine] = useState(null);
 
- const tabs = [
-  { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
-  { id: 'catalogo', label: 'Máquinas', icon: BookOpen },
-  { id: 'asistencia', label: 'Asistencia', icon: CalendarCheck },
-  { id: 'medidas', label: 'Medidas', icon: Activity },
-  { id: 'membresia', label: isAdmin ? 'Cobros Rápidos' : 'Membresía', icon: CreditCard },
-  ...(isAdmin ? [{ id: 'admin', label: 'Administración', icon: Users }] : []),
-];
+  // Pestañas diferenciadas
+  const tabs = isAdmin
+    ? [
+        { id: 'admin', label: 'Gestión y Contabilidad', icon: LayoutDashboard },
+        { id: 'cobros', label: 'Cobros y Recibos', icon: CreditCard },
+        { id: 'catalogo', label: 'Biblioteca de Máquinas', icon: BookOpen },
+      ]
+    : [
+        { id: 'inicio', label: 'Mi Membresía', icon: ShieldCheck },
+        { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
+        { id: 'asistencia', label: 'Mi Acceso (QR)', icon: CalendarCheck },
+        { id: 'medidas', label: 'Mis Medidas', icon: Activity },
+        { id: 'catalogo', label: 'Máquinas', icon: BookOpen },
+      ];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6 pb-20">
@@ -46,10 +62,10 @@ function Dashboard() {
           </button>
         </header>
 
-        {/* Temporizador flotante de descanso */}
-        <RestTimer />
+        {/* Solo el atleta necesita cronómetro para entrenar */}
+        {!isAdmin && <RestTimer />}
 
-        {/* Barra de Pestañas */}
+        {/* Barra de Navegación por pestañas */}
         <nav className="flex bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 gap-1 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -60,7 +76,7 @@ function Dashboard() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                   isSelected
-                    ? 'bg-emerald-500 text-slate-950 shadow-md'
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'
                 }`}
               >
@@ -71,27 +87,35 @@ function Dashboard() {
           })}
         </nav>
 
-        {/* Contenido según pestaña activa */}
+        {/* Contenido de vistas */}
         <main>
-          {activeTab === 'admin' && isAdmin && <AdminPanel />}
+          {/* Vistas exclusivas de ADMIN */}
+          {isAdmin && activeTab === 'admin' && <AdminPanel />}
+          {isAdmin && activeTab === 'cobros' && <MembershipCard user={user} />}
 
-          {activeTab === 'asistencia' && <AttendanceCard user={user} />}
+          {/* Vistas para MEMBER */}
+          {!isAdmin && activeTab === 'inicio' && (
+            <div className="space-y-5">
+              <MembershipCard user={user} />
+              <AttendanceCard user={user} />
+            </div>
+          )}
 
-          {activeTab === 'medidas' && <ProgressTracker />}
+          {!isAdmin && activeTab === 'entrenamiento' && (
+            <div className="space-y-5">
+              <RoutinesView 
+                onSelectRoutine={(routine) => setSelectedRoutine(routine)} 
+                currentRoutineId={selectedRoutine?.id} 
+              />
+              <WorkoutTracker selectedRoutine={selectedRoutine} />
+            </div>
+          )}
 
+          {!isAdmin && activeTab === 'asistencia' && <AttendanceCard user={user} />}
+          {!isAdmin && activeTab === 'medidas' && <ProgressTracker />}
+
+          {/* Vista compartida */}
           {activeTab === 'catalogo' && <ExerciseCatalog user={user} />}
-
-          {activeTab === 'membresia' && <MembershipCard user={user} />}
-
-          {activeTab === 'entrenamiento' && (
-  <div className="space-y-5">
-    <RoutinesView 
-      onSelectRoutine={(routine) => setSelectedRoutine(routine)} 
-      currentRoutineId={selectedRoutine?.id} 
-    />
-    <WorkoutTracker selectedRoutine={selectedRoutine} />
-  </div>
-)}
         </main>
       </div>
     </div>

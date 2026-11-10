@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, User, Phone, Mail, Lock, Activity } from 'lucide-react';
+import { Dumbbell, User, Phone, Mail, Lock } from 'lucide-react';
 
 export default function AuthPage() {
   const { login, register } = useAuth();
@@ -12,12 +12,7 @@ export default function AuthPage() {
     nombre: '',
     telefono: '',
     email: '',
-    password: '',
-    peso: '',
-    grasa: '',
-    pecho: '',
-    brazo: '',
-    cintura: ''
+    password: ''
   });
 
   const handleChange = (e) => {
@@ -51,7 +46,7 @@ export default function AuthPage() {
           </div>
           <h1 className="text-2xl font-bold">Gym App</h1>
           <p className="text-slate-400 text-sm mt-1">
-            {isLogin ? 'Accede a tu cuenta' : 'Registra tu perfil y medidas'}
+            {isLogin ? 'Accede a tu cuenta' : 'Crea tu cuenta de socio'}
           </p>
         </div>
 
@@ -128,52 +123,6 @@ export default function AuthPage() {
               />
             </div>
           </div>
-
-          {!isLogin && (
-            <div className="pt-2 border-t border-slate-700/60">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-2">
-                <Activity className="w-4 h-4" /> Medidas Iniciales (Opcional)
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <input
-                  type="number"
-                  step="0.1"
-                  name="peso"
-                  value={formData.peso}
-                  onChange={handleChange}
-                  placeholder="Peso (kg)"
-                  className="p-2 bg-slate-900 border border-slate-700 rounded-lg focus:border-emerald-500 focus:outline-none"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  name="grasa"
-                  value={formData.grasa}
-                  onChange={handleChange}
-                  placeholder="% Grasa"
-                  className="p-2 bg-slate-900 border border-slate-700 rounded-lg focus:border-emerald-500 focus:outline-none"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  name="pecho"
-                  value={formData.pecho}
-                  onChange={handleChange}
-                  placeholder="Pecho (cm)"
-                  className="p-2 bg-slate-900 border border-slate-700 rounded-lg focus:border-emerald-500 focus:outline-none"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  name="brazo"
-                  value={formData.brazo}
-                  onChange={handleChange}
-                  placeholder="Brazo (cm)"
-                  className="p-2 bg-slate-900 border border-slate-700 rounded-lg focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          )}
 
           <button
             type="submit"
