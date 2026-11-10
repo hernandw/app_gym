@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import ReceptionCheckin from './ReceptionCheckin';
 import { 
   DollarSign, 
   Users, 
@@ -140,6 +141,7 @@ export default function AdminPanel() {
           <PlusCircle className="w-4 h-4" /> Nueva Rutina Oficial
         </button>
       </div>
+      <ReceptionCheckin />
 
       {/* 3. Tabla Contable y de Gestión de Socios */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
