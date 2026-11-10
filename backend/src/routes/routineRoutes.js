@@ -6,6 +6,7 @@ import {
   createRoutine 
 } from '../controllers/routineController.js';
 import { verifyToken } from '../middlewares/authMiddleware.js';
+import { upload } from '../middlewares/uploadMiddleware.js';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.use(verifyToken);
 
 // Ejercicios
 router.get('/exercises', getExercises);
-router.post('/exercises', createExercise);
+router.post('/exercises', upload.single('imagen'), createExercise);
 
 // Rutinas
 router.get('/', getMyRoutines);

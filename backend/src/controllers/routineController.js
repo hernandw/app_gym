@@ -18,14 +18,22 @@ export const getExercises = async (req, res) => {
 // Crear un ejercicio
 export const createExercise = async (req, res) => {
   try {
-    const { nombre, grupoMuscular, descripcion, fotoUrl } = req.body;
+    const { nombre, grupoMuscular, descripcion } = req.body;
+    const fotoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.fotoUrl || null;
+
     const exercise = await prisma.exercise.create({
-      data: { nombre, grupoMuscular, descripcion, fotoUrl }
+      data: {
+        nombre,
+        grupoMuscular,
+        descripcion: descripcion || null,
+        fotoUrl
+      }
     });
+
     res.status(201).json(exercise);
   } catch (error) {
     console.error('Error al crear ejercicio:', error);
-    res.status(500).json({ error: 'Error al crear ejercicio.' });
+    res.status(500).json({ error: 'Error al registrar el ejercicio.' });
   }
 };
 

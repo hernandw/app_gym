@@ -7,6 +7,11 @@ import routineRoutes from './routes/routineRoutes.js';
 import workoutRoutes from './routes/workoutRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,7 +28,11 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
+
 app.use(express.json());
+
+// Exponer la carpeta de imágenes estáticas
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rutas
 app.use('/api/auth', authRoutes);
