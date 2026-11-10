@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes.js';
 import measurementRoutes from './routes/measurementRoutes.js';
 import routineRoutes from './routes/routineRoutes.js';
 import workoutRoutes from './routes/workoutRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/measurements', measurementRoutes);
 app.use('/api/routines', routineRoutes);
 app.use('/api/workouts', workoutRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Endpoint de prueba
 app.get('/api/health', (req, res) => {
