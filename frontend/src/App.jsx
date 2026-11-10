@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
+import ProgressTracker from './components/ProgressTracker';
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -18,6 +19,8 @@ function Dashboard() {
           Cerrar sesión
         </button>
       </div>
+      {/* Módulo de Medidas y Progreso */}
+      <ProgressTracker />
     </div>
   );
 }

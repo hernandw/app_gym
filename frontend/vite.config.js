@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base:"https://github.com/hernandw/app_gym",
+  base:"/app_gym",
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
