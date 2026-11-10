@@ -5,8 +5,9 @@ export const getAccountingSummary = async (req, res) => {
   try {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
 
-    // Pagos registrados
+    // Todos los pagos
     const payments = await prisma.payment.findMany({
       include: {
         user: { select: { nombre: true, telefono: true } }
@@ -14,16 +15,19 @@ export const getAccountingSummary = async (req, res) => {
       orderBy: { fechaPago: 'desc' }
     });
 
-    // Total histórico y total del mes en curso
+    // Ingresos: total histórico, del año y del mes
     const totalRevenue = payments.reduce((acc, curr) => acc + curr.monto, 0);
+    const yearlyRevenue = payments
+      .filter((p) => new Date(p.fechaPago) >= startOfYear)
+      .reduce((acc, curr) => acc + curr.monto, 0);
     const monthlyRevenue = payments
       .filter((p) => new Date(p.fechaPago) >= startOfMonth)
       .reduce((acc, curr) => acc + curr.monto, 0);
 
-    // Conteo de socios activos vs vencidos
+    // Socios
     const members = await prisma.user.findMany({
       where: { rol: 'MEMBER' },
-      select: { id: true, estadoMembresia: true, fechaVencimiento: true }
+      select: { id: true, estadoMembresia: true, fechaVencimiento: true, createdAt: true }
     });
 
     const activeCount = members.filter(
@@ -31,10 +35,17 @@ export const getAccountingSummary = async (req, res) => {
     ).length;
     const expiredCount = members.length - activeCount;
 
+    // Nuevos clientes inscritos en el mes actual
+    const newMembersThisMonth = members.filter(
+      (m) => new Date(m.createdAt) >= startOfMonth
+    ).length;
+
     res.json({
       totalRevenue,
+      yearlyRevenue,
       monthlyRevenue,
       totalMembers: members.length,
+      newMembersThisMonth,
       activeCount,
       expiredCount,
       recentPayments: payments.slice(0, 15)
@@ -45,7 +56,6 @@ export const getAccountingSummary = async (req, res) => {
   }
 };
 
-// 2. Modificar datos de un socio (nombre, teléfono, email, estado, fechas)
 export const updateMemberByAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,3 +86,4 @@ export const updateMemberByAdmin = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar datos del socio.' });
   }
 };
+
