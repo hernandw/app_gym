@@ -7,17 +7,20 @@ export default function RoutinesView() {
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. Declarar fetchRoutines directamente en el cuerpo del componente
+  const fetchRoutines = async () => {
+    try {
+      const res = await api.get('/routines');
+      setRoutines(res.data);
+    } catch (err) {
+      console.error('Error al cargar rutinas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Invocarla en el montaje
   useEffect(() => {
-    const fetchRoutines = async () => {
-      try {
-        const res = await api.get('/routines');
-        setRoutines(res.data);
-      } catch (err) {
-        console.error('Error al cargar rutinas:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRoutines();
   }, []);
 
@@ -27,13 +30,18 @@ export default function RoutinesView() {
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
-      <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-4">
-        <Dumbbell className="w-5 h-5" />
-        <span>Mis Rutinas y Plantillas</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+          <Dumbbell className="w-5 h-5" />
+          <span>Mis Rutinas y Plantillas</span>
+        </div>
+        {/* Ahora fetchRoutines ya existe y está disponible */}
         <AddExerciseModal onExerciseAdded={fetchRoutines} />
       </div>
 
-      {routines.length === 0 ? (
+      {loading ? (
+        <p className="text-slate-400 text-xs">Cargando rutinas disponibles...</p>
+      ) : routines.length === 0 ? (
         <div className="text-center py-8 text-slate-400 text-xs">
           <ListPlus className="w-8 h-8 mx-auto mb-2 opacity-50" />
           No hay rutinas asignadas ni plantillas creadas todavía.

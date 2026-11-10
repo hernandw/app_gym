@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { CreditCard, CheckCircle, AlertTriangle, Receipt, UserCheck } from 'lucide-react';
+import { CreditCard, CheckCircle, AlertTriangle, Receipt, UserCheck, MessageSquareShare } from 'lucide-react';
+import { generatePaymentReceiptLink } from '../utils/whatsapp';
 
 export default function MembershipCard({ user }) {
   const [payments, setPayments] = useState([]);
@@ -36,12 +37,29 @@ export default function MembershipCard({ user }) {
     e.preventDefault();
     if (!selectedMember) return;
     try {
-      await api.post('/payments/register', {
+      const res = await api.post('/payments/register', {
         userId: selectedMember,
         monto,
         metodo
       });
+
+      const memberData = members.find((m) => m.id === selectedMember);
+
+      // Abrir WhatsApp con el recibo generado
+      if (memberData && memberData.telefono) {
+        const link = generatePaymentReceiptLink({
+          clienteNombre: memberData.nombre,
+          telefono: memberData.telefono,
+          monto: parseFloat(monto),
+          fechaPago: new Date(),
+          fechaVencimiento: res.data.payment?.user?.fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          metodo
+        });
+        window.open(link, '_blank');
+      }
+
       alert('Pago registrado correctamente');
+      setSelectedMember('');
       fetchData();
     } catch (err) {
       alert('Error al registrar el pago');
@@ -91,7 +109,9 @@ export default function MembershipCard({ user }) {
             <h4 className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1">
               <Receipt className="w-4 h-4 text-slate-400" /> Recibos de pago
             </h4>
-            {payments.length === 0 ? (
+            {loading ? (
+              <p className="text-slate-500 text-xs">Cargando recibos...</p>
+            ) : payments.length === 0 ? (
               <p className="text-slate-500 text-xs">No hay recibos registrados aún.</p>
             ) : (
               <div className="space-y-1.5">
@@ -153,7 +173,7 @@ export default function MembershipCard({ user }) {
             </button>
           </form>
 
-          {/* Lista de socios con estado de vencimiento */}
+          {/* Lista de socios con estado de vencimiento y acción WhatsApp */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/40 text-slate-400 uppercase text-[10px]">
@@ -162,6 +182,7 @@ export default function MembershipCard({ user }) {
                   <th className="p-2.5">Teléfono</th>
                   <th className="p-2.5">Vencimiento</th>
                   <th className="p-2.5">Estado</th>
+                  <th className="p-2.5 text-right">Comprobante</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -182,6 +203,25 @@ export default function MembershipCard({ user }) {
                         }`}>
                           {dias > 0 ? `${dias} días rest.` : 'Vencido'}
                         </span>
+                      </td>
+                      <td className="p-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const link = generatePaymentReceiptLink({
+                              clienteNombre: m.nombre,
+                              telefono: m.telefono,
+                              monto: parseFloat(monto) || 25000,
+                              fechaPago: m.fechaPago || new Date(),
+                              fechaVencimiento: m.fechaVencimiento || new Date(),
+                              metodo: 'Mensualidad'
+                            });
+                            window.open(link, '_blank');
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded text-[11px] transition-colors"
+                        >
+                          <MessageSquareShare className="w-3.5 h-3.5" /> Enviar
+                        </button>
                       </td>
                     </tr>
                   );

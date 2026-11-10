@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Activity, Plus, Calendar, Scale } from 'lucide-react';
+import { Activity, Plus, MessageSquareShare } from 'lucide-react';
+import { generateMeasurementsReportLink } from '../utils/whatsapp';
 
 export default function ProgressTracker() {
   const [measurements, setMeasurements] = useState([]);
@@ -39,6 +40,16 @@ export default function ProgressTracker() {
     } catch (err) {
       console.error('Error al registrar medidas:', err);
     }
+  };
+
+  const handleShareWhatsApp = (medida) => {
+    const userStored = JSON.parse(localStorage.getItem('gym_user') || '{}');
+    const link = generateMeasurementsReportLink({
+      clienteNombre: userStored.nombre || 'Socio',
+      telefono: userStored.telefono,
+      medidas: medida
+    });
+    window.open(link, '_blank');
   };
 
   return (
@@ -124,6 +135,7 @@ export default function ProgressTracker() {
                 <th className="p-2.5">Pecho</th>
                 <th className="p-2.5">Brazo</th>
                 <th className="p-2.5">Cintura</th>
+                <th className="p-2.5 text-right">Compartir</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
@@ -139,6 +151,16 @@ export default function ProgressTracker() {
                   <td className="p-2.5">{m.pecho ? `${m.pecho} cm` : '-'}</td>
                   <td className="p-2.5">{m.brazo ? `${m.brazo} cm` : '-'}</td>
                   <td className="p-2.5">{m.cintura ? `${m.cintura} cm` : '-'}</td>
+                  <td className="p-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleShareWhatsApp(m)}
+                      title="Enviar reporte por WhatsApp"
+                      className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-emerald-400 transition-colors"
+                    >
+                      <MessageSquareShare className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
