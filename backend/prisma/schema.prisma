@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COACH
+  MEMBER
+}
+
+enum PaymentStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+}
+
+model User {
+  id              String        @id @default(uuid())
+  nombre          String
+  telefono        String        @unique
+  email           String?       @unique
+  password        String
+  rol             Role          @default(MEMBER)
+  estadoMembresia PaymentStatus @default(PENDING)
+  fechaPago       DateTime?
+  fechaVencimiento DateTime?
+  createdAt       DateTime      @default(now())
+
+  // Relaciones
+  medidas         Measurement[]
+  registros       WorkoutLog[]
+  asistencias     Attendance[]
+  pagos           Payment[]
+  rutinas         Routine[]
+}
+
+model Measurement {
+  id        String   @id @default(uuid())
+  userId    String
+  peso      Float?
+  grasa     Float?
+  pecho     Float?
+  brazo     Float?
+  cintura   Float?
+  fecha     DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Exercise {
+  id             String            @id @default(uuid())
+  nombre         String
+  grupoMuscular  String            // Ej: "Pecho", "Espalda", "Pierna"
+  fotoUrl        String?           // Ruta a la imagen de la máquina
+  descripcion    String?
+  createdAt      DateTime          @default(now())
+
+  rutinas        RoutineExercise[]
+  registros      WorkoutLog[]
+}
+
+model Routine {
+  id          String            @id @default(uuid())
+  nombre      String            // Ej: "Rutina Pecho y Tríceps - Nivel 1"
+  userId      String?           // Opcional: si es nulo es una plantilla pública; si tiene ID es personalizada
+  createdAt   DateTime          @default(now())
+
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ejercicios  RoutineExercise[]
+}
+
+model RoutineExercise {
+  id          String    @id @default(uuid())
+  routineId   String
+  exerciseId  String
+  series      Int
+  reps        Int
+  descansoSeg Int       @default(60)
+
+  routine     Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise    Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+model WorkoutLog {
+  id          String    @id @default(uuid())
+  userId      String
+  exerciseId  String
+  pesoUsado   Float     // En kg o lbs
+  reps        Int
+  fecha       DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise    Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String
+  fecha     DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  userId         String
+  monto          Float
+  metodo         String   // Efectivo, Transferencia, etc.
+  comprobanteUrl String?
+  fechaPago      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
