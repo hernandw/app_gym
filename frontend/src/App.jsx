@@ -2,7 +2,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import ProgressTracker from './components/ProgressTracker';
 import RoutinesView from './components/RoutinesView';
-
+import WorkoutTracker from './components/WorkoutTracker';
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -21,6 +21,8 @@ function Dashboard() {
           Cerrar sesión
         </button>
       </div>
+      {/* Métricas y Registro Diario de Cargas */}
+      <WorkoutTracker />
       {/* Rutinas */}
       <RoutinesView />
       {/* Módulo de Medidas y Progreso */}

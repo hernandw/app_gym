@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import measurementRoutes from './routes/measurementRoutes.js';
 import routineRoutes from './routes/routineRoutes.js';
+import workoutRoutes from './routes/workoutRoutes.js';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/measurements', measurementRoutes);
 app.use('/api/routines', routineRoutes);
+app.use('/api/workouts', workoutRoutes);
 
 // Endpoint de prueba
 app.get('/api/health', (req, res) => {
