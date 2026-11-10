@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Search, UserCheck, CheckCircle2, AlertTriangle, Users } from 'lucide-react';
+import { Search, UserCheck, CheckCircle2, AlertTriangle, Users, QrCode } from 'lucide-react';
+import QRScannerModal from './QRScannerModal';
 
 export default function ReceptionCheckin() {
   const [telefono, setTelefono] = useState('');
@@ -8,6 +9,7 @@ export default function ReceptionCheckin() {
   const [lastCheckin, setLastCheckin] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const fetchTodayList = async () => {
     try {
@@ -22,19 +24,13 @@ export default function ReceptionCheckin() {
     fetchTodayList();
   }, []);
 
-  const handleReceptionCheckin = async (e) => {
-    e.preventDefault();
+  const executeCheckin = async (phoneToValidate) => {
     setErrorMsg('');
     setLastCheckin(null);
-
-    if (!telefono.trim()) {
-      setErrorMsg('Ingresa un número de teléfono.');
-      return;
-    }
-
     setLoading(true);
+
     try {
-      const res = await api.post('/attendance/admin/checkin', { telefono: telefono.trim() });
+      const res = await api.post('/attendance/admin/checkin', { telefono: phoneToValidate });
       setLastCheckin(res.data.member);
       setTelefono('');
       fetchTodayList();
@@ -46,6 +42,20 @@ export default function ReceptionCheckin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    if (!telefono.trim()) {
+      setErrorMsg('Ingresa un número de teléfono.');
+      return;
+    }
+    executeCheckin(telefono.trim());
+  };
+
+  const handleQRSuccess = (scannedText) => {
+    setIsScannerOpen(false);
+    executeCheckin(scannedText.trim());
   };
 
   return (
@@ -60,25 +70,31 @@ export default function ReceptionCheckin() {
         </span>
       </div>
 
-      {/* Buscador de ingreso rápido */}
-      <form onSubmit={handleReceptionCheckin} className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mb-5">
-        <label className="text-xs text-slate-400 block mb-2 font-medium">
-          Buscar socio por número de teléfono para dar acceso:
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Ej: +56912345678"
-            value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
-            className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-          />
+      <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mb-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2">
+            <input
+              type="text"
+              placeholder="Buscar por teléfono..."
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-lg text-xs transition-colors"
+            >
+              <Search className="w-4 h-4" /> {loading ? 'Validando...' : 'Dar Acceso'}
+            </button>
+          </form>
+
           <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-lg text-xs transition-colors"
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-xs font-semibold transition-colors"
           >
-            <Search className="w-4 h-4" /> {loading ? 'Validando...' : 'Dar Acceso'}
+            <QrCode className="w-4 h-4 text-emerald-400" /> Escanear QR
           </button>
         </div>
 
@@ -87,9 +103,8 @@ export default function ReceptionCheckin() {
             {errorMsg}
           </p>
         )}
-      </form>
+      </div>
 
-      {/* Tarjeta de estado de membresía del último socio consultado */}
       {lastCheckin && (
         <div className="mb-5 p-4 bg-slate-900/80 border border-slate-700 rounded-xl flex items-center justify-between">
           <div>
@@ -110,7 +125,6 @@ export default function ReceptionCheckin() {
         </div>
       )}
 
-      {/* Lista de entradas del día */}
       <div>
         <h4 className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1">
           <Users className="w-3.5 h-3.5 text-slate-400" /> Registro de ingresos de hoy
@@ -136,6 +150,12 @@ export default function ReceptionCheckin() {
           </div>
         )}
       </div>
+
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={handleQRSuccess}
+      />
     </div>
   );
 }
