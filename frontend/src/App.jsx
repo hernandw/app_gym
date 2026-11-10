@@ -9,6 +9,8 @@ import AttendanceCard from './components/AttendanceCard';
 import RestTimer from './components/RestTimer';
 import { Dumbbell, Activity, CalendarCheck, CreditCard, LogOut } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
+import ExerciseCatalog from './components/ExerciseCatalog';
+import { BookOpen } from 'lucide-react';
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -18,6 +20,7 @@ function Dashboard() {
 
  const tabs = [
   { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
+  { id: 'catalogo', label: 'Máquinas', icon: BookOpen },
   { id: 'asistencia', label: 'Asistencia', icon: CalendarCheck },
   { id: 'medidas', label: 'Medidas', icon: Activity },
   { id: 'membresia', label: isAdmin ? 'Cobros Rápidos' : 'Membresía', icon: CreditCard },
@@ -75,6 +78,8 @@ function Dashboard() {
           {activeTab === 'asistencia' && <AttendanceCard />}
 
           {activeTab === 'medidas' && <ProgressTracker />}
+
+          {activeTab === 'catalogo' && <ExerciseCatalog user={user} />}
 
           {activeTab === 'membresia' && <MembershipCard user={user} />}
 
