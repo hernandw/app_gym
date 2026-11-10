@@ -10,7 +10,9 @@
   },
   "scripts": {
     "postinstall": "prisma skills sync || exit 0",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+  "build": "npx prisma generate",
+  "start": "node src/index.js"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

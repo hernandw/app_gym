@@ -5,11 +5,19 @@ import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.CLIENT_URL // URL de GitHub Pages (ej: https://usuario.github.io)
+].filter(Boolean);
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middlewares globales
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json());
 
 // Rutas
