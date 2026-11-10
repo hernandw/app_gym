@@ -4,6 +4,7 @@ import ProgressTracker from './components/ProgressTracker';
 import RoutinesView from './components/RoutinesView';
 import WorkoutTracker from './components/WorkoutTracker';
 import MembershipCard from './components/MembershipCard';
+import AttendanceCard from './components/AttendanceCard';
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -24,6 +25,7 @@ function Dashboard() {
       </div>
       {/* Membresía y Cobros */}
       <MembershipCard user={user} />
+      <AttendanceCard />
       {/* Métricas y Registro Diario de Cargas */}
       <WorkoutTracker />
       {/* Rutinas */}
