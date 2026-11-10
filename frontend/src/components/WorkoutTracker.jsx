@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Flame, Calendar, Dumbbell, TrendingUp, Plus } from 'lucide-react';
 
-export default function WorkoutTracker() {
+export default function WorkoutTracker({ selectedRoutine }) {
   const [stats, setStats] = useState({ totalVolume: 0, daysAttended: 0, recentLogs: [] });
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,13 +17,18 @@ export default function WorkoutTracker() {
         api.get('/routines/exercises')
       ]);
       setStats(statsRes.data || { totalVolume: 0, daysAttended: 0, recentLogs: [] });
-      setExercises(exercisesRes.data || []);
       
-      if (exercisesRes.data && exercisesRes.data.length > 0) {
+      const allExercises = exercisesRes.data || [];
+      setExercises(allExercises);
+
+      // Si hay una rutina activa con ejercicios, priorizar el primero de ella
+      if (selectedRoutine?.ejercicios?.length > 0) {
         setFormData((prev) => ({
           ...prev,
-          exerciseId: prev.exerciseId || exercisesRes.data[0].id
+          exerciseId: selectedRoutine.ejercicios[0].exerciseId
         }));
+      } else if (allExercises.length > 0 && !formData.exerciseId) {
+        setFormData((prev) => ({ ...prev, exerciseId: allExercises[0].id }));
       }
     } catch (err) {
       console.error('Error cargando datos de entrenamiento:', err);
@@ -34,14 +39,14 @@ export default function WorkoutTracker() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedRoutine]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!formData.exerciseId) {
-      setErrorMsg('Debes seleccionar un ejercicio primero. Crea uno en la sección de rutinas si la lista está vacía.');
+      setErrorMsg('Debes seleccionar un ejercicio para registrar la serie.');
       return;
     }
 
@@ -51,7 +56,7 @@ export default function WorkoutTracker() {
     }
 
     if (!formData.reps || parseInt(formData.reps, 10) <= 0) {
-      setErrorMsg('Ingresa una cantidad de repeticiones válida (mayor a 0).');
+      setErrorMsg('Ingresa repeticiones válidas (mínimo 1).');
       return;
     }
 
@@ -66,15 +71,20 @@ export default function WorkoutTracker() {
       await fetchData();
     } catch (err) {
       console.error('Error al registrar serie:', err);
-      setErrorMsg(err.response?.data?.error || 'Error al registrar la serie en el servidor.');
+      setErrorMsg(err.response?.data?.error || 'Error al guardar la serie.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Filtrar ejercicios: si hay rutina elegida, mostrar los de la rutina; de lo contrario, todo el catálogo
+  const availableExercises = selectedRoutine?.ejercicios?.length > 0
+    ? selectedRoutine.ejercicios.map((item) => item.exercise)
+    : exercises;
+
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
-      {/* Tarjetas de Resumen / KPIs */}
+      {/* Resumen KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-700/60">
           <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
@@ -101,11 +111,18 @@ export default function WorkoutTracker() {
         </div>
       </div>
 
-      {/* Formulario para anotar levantamiento */}
+      {/* Formulario de Registro */}
       <form onSubmit={handleSubmit} className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 mb-5">
-        <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1">
-          <Plus className="w-4 h-4 text-emerald-400" /> Registrar carga levantada
-        </h3>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+            <Plus className="w-4 h-4 text-emerald-400" /> Registrar carga levantada
+          </h3>
+          {selectedRoutine && (
+            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
+              Rutina: {selectedRoutine.nombre}
+            </span>
+          )}
+        </div>
 
         {errorMsg && (
           <div className="mb-3 p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded text-xs">
@@ -119,16 +136,17 @@ export default function WorkoutTracker() {
             onChange={(e) => setFormData({ ...formData, exerciseId: e.target.value })}
             className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500 sm:col-span-2"
           >
-            {exercises.length === 0 ? (
-              <option value="">No hay ejercicios creados aún</option>
+            {availableExercises.length === 0 ? (
+              <option value="">No hay ejercicios disponibles</option>
             ) : (
-              exercises.map((ex) => (
+              availableExercises.map((ex) => (
                 <option key={ex.id} value={ex.id}>
                   {ex.nombre} ({ex.grupoMuscular})
                 </option>
               ))
             )}
           </select>
+
           <input
             type="number"
             step="0.5"
@@ -139,6 +157,7 @@ export default function WorkoutTracker() {
             onChange={(e) => setFormData({ ...formData, pesoUsado: e.target.value })}
             className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500"
           />
+
           <input
             type="number"
             min="1"
@@ -149,20 +168,21 @@ export default function WorkoutTracker() {
             className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500"
           />
         </div>
+
         <button
           type="submit"
-          disabled={submitting || exercises.length === 0}
+          disabled={submitting || availableExercises.length === 0}
           className="w-full mt-2 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded text-xs transition-colors"
         >
-          {submitting ? 'Guardando serie...' : 'Anotar serie'}
+          {submitting ? 'Anotando serie...' : 'Anotar serie'}
         </button>
       </form>
 
-      {/* Historial reciente */}
+      {/* Historial de la sesión */}
       <div>
-        <h4 className="text-xs font-semibold text-slate-400 mb-2">Últimos levantamientos</h4>
+        <h4 className="text-xs font-semibold text-slate-400 mb-2">Series realizadas en la sesión</h4>
         {!stats.recentLogs || stats.recentLogs.length === 0 ? (
-          <p className="text-slate-500 text-xs">No hay entrenamientos registrados hoy.</p>
+          <p className="text-slate-500 text-xs">No hay entrenamientos anotados hoy.</p>
         ) : (
           <div className="space-y-1.5">
             {stats.recentLogs.map((log) => (

@@ -14,6 +14,7 @@ function Dashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('entrenamiento');
   const isAdmin = user?.rol === 'ADMIN';
+  const [selectedRoutine, setSelectedRoutine] = useState(null);
 
  const tabs = [
   { id: 'entrenamiento', label: 'Entrenar', icon: Dumbbell },
@@ -76,6 +77,16 @@ function Dashboard() {
           {activeTab === 'medidas' && <ProgressTracker />}
 
           {activeTab === 'membresia' && <MembershipCard user={user} />}
+
+          {activeTab === 'entrenamiento' && (
+  <div className="space-y-5">
+    <RoutinesView 
+      onSelectRoutine={(routine) => setSelectedRoutine(routine)} 
+      currentRoutineId={selectedRoutine?.id} 
+    />
+    <WorkoutTracker selectedRoutine={selectedRoutine} />
+  </div>
+)}
         </main>
       </div>
     </div>
