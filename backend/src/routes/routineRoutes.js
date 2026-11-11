@@ -22,4 +22,8 @@ router.get('/', getMyRoutines);
 router.post('/', createRoutine);
 router.post('/templates', requireRole('ADMIN'), createAdminTemplate);
 
+router.put('/exercises/:id', requireRole('ADMIN'), updateExercise);
+router.delete('/exercises/:id', requireRole('ADMIN'), deleteExercise);
+router.delete('/templates/:id', requireRole('ADMIN'), deleteRoutine);
+
 export default router;

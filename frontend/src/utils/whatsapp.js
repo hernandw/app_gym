@@ -52,3 +52,9 @@ Sigue registrando tus avances en la app. ¡Gran trabajo! 🔥`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
 };
+
+export const generateExpiredNoticeLink = ({ clienteNombre, telefono, diasVencidos }) => {
+  const cleanPhone = telefono ? telefono.replace(/[^0-9]/g, '') : '';
+  const mensaje = `Hola ${clienteNombre}, te informamos desde Gym App que tu membresía se encuentra vencida${diasVencidos > 0 ? ` hace ${diasVencidos} días` : ''}. Por favor acércate a recepción o escríbenos para renovar tu acceso y continuar entrenando. ¡Te esperamos!`;
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
+};

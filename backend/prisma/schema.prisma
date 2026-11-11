@@ -116,3 +116,12 @@ model Payment {
 
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Expense {
+  id          String   @id @default(uuid())
+  descripcion String
+  monto       Float
+  categoria   String   // "Servicios", "Equipamiento", "Limpieza", "Mantenimiento", "Otro"
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+}

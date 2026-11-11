@@ -1,252 +1,269 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { CreditCard, CheckCircle, AlertTriangle, Receipt, UserCheck, MessageSquareShare } from 'lucide-react';
-import { generatePaymentReceiptLink } from '../utils/whatsapp';
-import { FileDown } from 'lucide-react';
+import { CreditCard, DollarSign, Calendar, MessageSquare, FileDown, Trash2, Edit3, X } from 'lucide-react';
+import { generatePaymentReceiptLink, generateExpiredNoticeLink } from '../utils/whatsapp';
 import { generateReceiptPDF } from '../utils/pdfGenerator';
 
 export default function MembershipCard({ user }) {
-  const [payments, setPayments] = useState([]);
   const [members, setMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState('');
   const [monto, setMonto] = useState('25000');
-  const [metodo, setMetodo] = useState('Efectivo');
-  const [loading, setLoading] = useState(true);
+  const [meses, setMeses] = useState('1');
+  const [loading, setLoading] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [recentPayments, setRecentPayments] = useState([]);
 
   const isAdmin = user?.rol === 'ADMIN';
 
-  const fetchData = async () => {
+  const loadData = async () => {
     try {
       if (isAdmin) {
-        const res = await api.get('/payments/members');
-        setMembers(res.data);
-      } else {
-        const res = await api.get('/payments/my-history');
-        setPayments(res.data);
+        const [memRes, accRes] = await Promise.all([
+          api.get('/payments/members'),
+          api.get('/payments/accounting')
+        ]);
+        setMembers(memRes.data || []);
+        setRecentPayments(accRes.data?.recentPayments || []);
+        if (memRes.data?.length > 0 && !selectedMember) {
+          setSelectedMember(memRes.data[0].id);
+        }
       }
     } catch (err) {
-      console.error('Error cargando pagos:', err);
+      console.error('Error cargando cobranza:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [isAdmin]);
+
+  const handleRegisterPayment = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.post('/payments/register', {
+        userId: selectedMember,
+        monto: parseFloat(monto),
+        meses: parseInt(meses, 10),
+        metodo: 'Efectivo / Transferencia'
+      });
+      alert('Pago registrado correctamente');
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al registrar pago');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [isAdmin]);
-
-  const handleRegisterPayment = async (e) => {
-    e.preventDefault();
-    if (!selectedMember) return;
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este registro de pago?')) return;
     try {
-      const res = await api.post('/payments/register', {
-        userId: selectedMember,
-        monto,
-        metodo
-      });
-
-      const memberData = members.find((m) => m.id === selectedMember);
-
-      // Abrir WhatsApp con el recibo generado
-      if (memberData && memberData.telefono) {
-        const link = generatePaymentReceiptLink({
-          clienteNombre: memberData.nombre,
-          telefono: memberData.telefono,
-          monto: parseFloat(monto),
-          fechaPago: new Date(),
-          fechaVencimiento: res.data.payment?.user?.fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          metodo
-        });
-        window.open(link, '_blank');
-      }
-
-      alert('Pago registrado correctamente');
-      setSelectedMember('');
-      fetchData();
+      await api.delete(`/payments/payments/${paymentId}`);
+      loadData();
     } catch (err) {
-      alert('Error al registrar el pago');
+      alert('Error al eliminar el pago');
     }
   };
 
-  // Cálculo de días restantes
-  const diasRestantes = user?.fechaVencimiento
-    ? Math.ceil((new Date(user.fechaVencimiento) - new Date()) / (1000 * 60 * 60 * 24))
-    : 0;
+  const handleSavePaymentEdit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/payments/payments/${editingPayment.id}`, {
+        monto: parseFloat(editingPayment.monto),
+        fechaPago: editingPayment.fechaPago,
+        fechaVencimiento: editingPayment.fechaVencimiento
+      });
+      setEditingPayment(null);
+      loadData();
+    } catch (err) {
+      alert('Error al actualizar el pago');
+    }
+  };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
-      <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-4">
-        <CreditCard className="w-5 h-5" />
-        <span>{isAdmin ? 'Gestión de Membresías y Cobros' : 'Estado de Membresía'}</span>
-      </div>
+    <div className="space-y-6">
+      {/* Formulario de Cobro Rápido */}
+      {isAdmin && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-slate-100 mb-4 flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-emerald-400" /> Registrar Nuevo Pago / Renovar Membresía
+          </h3>
+          <form onSubmit={handleRegisterPayment} className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <select
+              value={selectedMember}
+              onChange={(e) => setSelectedMember(e.target.value)}
+              className="p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre} ({m.telefono})
+                </option>
+              ))}
+            </select>
 
-      {!isAdmin ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
-            <div>
-              <p className="text-xs text-slate-400">Estado de cuenta</p>
-              <div className="flex items-center gap-2 mt-1">
-                {diasRestantes > 0 ? (
-                  <>
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
-                    <span className="font-bold text-slate-100 text-sm">Al día</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-5 h-5 text-amber-400" />
-                    <span className="font-bold text-amber-400 text-sm">Vencida / Pendiente</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Días restantes</p>
-              <p className={`text-2xl font-black ${diasRestantes > 3 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {diasRestantes > 0 ? diasRestantes : 0}
-              </p>
-            </div>
-          </div>
+            <input
+              type="number"
+              placeholder="Monto ($)"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              className="p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100"
+              required
+            />
 
-          <div>
-            <h4 className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1">
-              <Receipt className="w-4 h-4 text-slate-400" /> Recibos de pago
-            </h4>
-            {loading ? (
-              <p className="text-slate-500 text-xs">Cargando recibos...</p>
-            ) : payments.length === 0 ? (
-              <p className="text-slate-500 text-xs">No hay recibos registrados aún.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {payments.map((p) => (
-                  <div key={p.id} className="flex justify-between items-center bg-slate-900/30 px-3 py-2 rounded border border-slate-700/40 text-xs">
-                    <span>{new Date(p.fechaPago).toLocaleDateString()}</span>
-                    <span className="text-slate-400">{p.metodo}</span>
-                    <span className="font-bold text-emerald-400">${p.monto.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {/* Formulario Administrador para renovar cuota */}
-          <form onSubmit={handleRegisterPayment} className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 space-y-3">
-            <h4 className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4 text-emerald-400" /> Registrar pago mensual a un socio
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-              <select
-                value={selectedMember}
-                onChange={(e) => setSelectedMember(e.target.value)}
-                className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">Seleccionar socio...</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} ({m.telefono})
-                  </option>
-                ))}
-              </select>
+            <select
+              value={meses}
+              onChange={(e) => setMeses(e.target.value)}
+              className="p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
+            >
+              <option value="1">1 Mes (+30 días)</option>
+              <option value="3">3 Meses (+90 días)</option>
+              <option value="6">6 Meses (+180 días)</option>
+              <option value="12">1 Año (+365 días)</option>
+            </select>
 
-              <input
-                type="number"
-                placeholder="Monto"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-                className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
-
-              <select
-                value={metodo}
-                onChange={(e) => setMetodo(e.target.value)}
-                className="p-2 bg-slate-900 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia</option>
-                <option value="Tarjeta">Tarjeta</option>
-              </select>
-            </div>
             <button
               type="submit"
-              className="w-full py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded text-xs transition-colors"
+              disabled={loading}
+              className="py-2 bg-emerald-500 hover:bg-emerald-600 font-bold text-slate-950 rounded-lg transition-colors"
             >
-              Registrar Cobro y Extender Membresía (+30 días)
+              {loading ? 'Guardando...' : 'Registrar Cobro'}
             </button>
-            <button
-  type="button"
-  onClick={() => {
-    generateReceiptPDF({
-      clienteNombre: m.nombre,
-      telefono: m.telefono,
-      monto: parseFloat(monto) || 25000,
-      fechaPago: m.fechaPago || new Date(),
-      fechaVencimiento: m.fechaVencimiento || new Date(),
-      metodo: 'Mensualidad'
-    });
-  }}
-  title="Descargar comprobante en PDF"
-  className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 hover:text-white"
->
-  <FileDown className="w-3.5 h-3.5 inline" />
-</button>
           </form>
+        </div>
+      )}
 
-          {/* Lista de socios con estado de vencimiento y acción WhatsApp */}
+      {/* Historial de Pagos y Emisión de Recibos */}
+      {isAdmin && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-slate-100 mb-4 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-400" /> Historial de Cobros Recientes
+          </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/40 text-slate-400 uppercase text-[10px]">
+              <thead className="bg-slate-900/50 text-slate-400 uppercase text-[10px]">
                 <tr>
                   <th className="p-2.5">Socio</th>
-                  <th className="p-2.5">Teléfono</th>
-                  <th className="p-2.5">Vencimiento</th>
-                  <th className="p-2.5">Estado</th>
-                  <th className="p-2.5 text-right">Comprobante</th>
+                  <th className="p-2.5">Monto</th>
+                  <th className="p-2.5">Fecha Pago</th>
+                  <th className="p-2.5">Vigencia Hasta</th>
+                  <th className="p-2.5 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {members.map((m) => {
-                  const dias = m.fechaVencimiento
-                    ? Math.ceil((new Date(m.fechaVencimiento) - new Date()) / (1000 * 60 * 60 * 24))
-                    : 0;
-                  return (
-                    <tr key={m.id} className="hover:bg-slate-700/30">
-                      <td className="p-2.5 font-medium text-slate-100">{m.nombre}</td>
-                      <td className="p-2.5 text-slate-400">{m.telefono}</td>
-                      <td className="p-2.5">
-                        {m.fechaVencimiento ? new Date(m.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}
-                      </td>
-                      <td className="p-2.5">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          dias > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                        }`}>
-                          {dias > 0 ? `${dias} días rest.` : 'Vencido'}
-                        </span>
-                      </td>
-                      <td className="p-2.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const link = generatePaymentReceiptLink({
-                              clienteNombre: m.nombre,
-                              telefono: m.telefono,
-                              monto: parseFloat(monto) || 25000,
-                              fechaPago: m.fechaPago || new Date(),
-                              fechaVencimiento: m.fechaVencimiento || new Date(),
-                              metodo: 'Mensualidad'
-                            });
-                            window.open(link, '_blank');
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded text-[11px] transition-colors"
-                        >
-                          <MessageSquareShare className="w-3.5 h-3.5" /> Enviar
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {recentPayments.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-700/30">
+                    <td className="p-2.5 font-semibold text-slate-100">{p.user?.nombre || 'Socio'}</td>
+                    <td className="p-2.5 text-emerald-400 font-bold">${Number(p.monto).toLocaleString()}</td>
+                    <td className="p-2.5 text-slate-400">{new Date(p.fechaPago).toLocaleDateString()}</td>
+                    <td className="p-2.5 text-slate-300">{new Date(p.fechaVencimiento).toLocaleDateString()}</td>
+                    <td className="p-2.5 text-right space-x-1">
+                      <button
+                        onClick={() =>
+                          generateReceiptPDF({
+                            clienteNombre: p.user?.nombre || 'Socio',
+                            telefono: p.user?.telefono || 'N/A',
+                            monto: p.monto,
+                            fechaPago: p.fechaPago,
+                            fechaVencimiento: p.fechaVencimiento,
+                            metodo: p.metodo || 'Efectivo'
+                          })
+                        }
+                        title="Descargar PDF"
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-200"
+                      >
+                        <FileDown className="w-3.5 h-3.5 inline" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const link = generatePaymentReceiptLink({
+                            clienteNombre: p.user?.nombre || 'Socio',
+                            telefono: p.user?.telefono,
+                            monto: p.monto,
+                            fechaPago: p.fechaPago,
+                            fechaVencimiento: p.fechaVencimiento,
+                            metodo: p.metodo || 'Efectivo'
+                          });
+                          window.open(link, '_blank');
+                        }}
+                        title="Enviar Recibo por WhatsApp"
+                        className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 inline" />
+                      </button>
+
+                      <button
+                        onClick={() => setEditingPayment(p)}
+                        title="Editar Pago"
+                        className="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 inline" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDeletePayment(p.id)}
+                        title="Eliminar Pago"
+                        className="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 inline" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Pago */}
+      {editingPayment && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 border border-slate-700 p-5 rounded-2xl w-full max-w-sm relative">
+            <button
+              onClick={() => setEditingPayment(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h4 className="font-bold text-slate-100 text-sm mb-3">Modificar Pago</h4>
+            <form onSubmit={handleSavePaymentEdit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400">Monto ($)</label>
+                <input
+                  type="number"
+                  value={editingPayment.monto}
+                  onChange={(e) => setEditingPayment({ ...editingPayment, monto: e.target.value })}
+                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-slate-100"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-slate-400">Fecha de Pago</label>
+                <input
+                  type="date"
+                  value={editingPayment.fechaPago ? editingPayment.fechaPago.split('T')[0] : ''}
+                  onChange={(e) => setEditingPayment({ ...editingPayment, fechaPago: e.target.value })}
+                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400">Vigencia Hasta</label>
+                <input
+                  type="date"
+                  value={editingPayment.fechaVencimiento ? editingPayment.fechaVencimiento.split('T')[0] : ''}
+                  onChange={(e) => setEditingPayment({ ...editingPayment, fechaVencimiento: e.target.value })}
+                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-slate-100"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded"
+              >
+                Actualizar Pago
+              </button>
+            </form>
           </div>
         </div>
       )}
