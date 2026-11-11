@@ -4,7 +4,10 @@ import {
   createExercise, 
   getMyRoutines, 
   createRoutine,
-  createAdminTemplate 
+  createAdminTemplate,
+  updateExercise,
+  deleteExercise,
+  deleteRoutine 
 } from '../controllers/routineController.js';
 import { verifyToken, requireRole } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';

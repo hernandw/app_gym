@@ -157,29 +157,41 @@ export const deleteExercise = async (req, res) => {
   }
 };
 
-// Editar datos de un ejercicio
+// Editar un ejercicio existente
 export const updateExercise = async (req, res) => {
   try {
     const { id } = req.params;
     const { nombre, grupoMuscular, descripcion } = req.body;
+
     const exercise = await prisma.exercise.update({
       where: { id },
-      data: { nombre, grupoMuscular, descripcion }
+      data: {
+        nombre: nombre || undefined,
+        grupoMuscular: grupoMuscular || undefined,
+        descripcion: descripcion || undefined
+      }
     });
+
     res.json(exercise);
   } catch (error) {
-    res.status(500).json({ error: 'Error al editar ejercicio' });
+    console.error('Error al editar ejercicio:', error);
+    res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
   }
 };
 
-// Eliminar una rutina completa
+
+
+// Eliminar una plantilla de rutina oficial
 export const deleteRoutine = async (req, res) => {
   try {
     const { id } = req.params;
+
     await prisma.routineExercise.deleteMany({ where: { routineId: id } });
     await prisma.routine.delete({ where: { id } });
-    res.json({ message: 'Rutina eliminada con éxito' });
+
+    res.json({ message: 'Rutina eliminada correctamente.' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar rutina' });
+    console.error('Error al eliminar rutina:', error);
+    res.status(500).json({ error: 'Error al eliminar la rutina.' });
   }
 };
